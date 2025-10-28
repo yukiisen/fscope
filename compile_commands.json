@@ -1,0 +1,34 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Iinclude",
+      "-c",
+      "-o",
+      "build/main.o",
+      "src/main.c"
+    ],
+    "directory": "/home/yuki/Documents/Projects/fscope",
+    "file": "/home/yuki/Documents/Projects/fscope/src/main.c",
+    "output": "/home/yuki/Documents/Projects/fscope/build/main.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Iinclude",
+      "-c",
+      "-o",
+      "build/match.o",
+      "src/match.c"
+    ],
+    "directory": "/home/yuki/Documents/Projects/fscope",
+    "file": "/home/yuki/Documents/Projects/fscope/src/match.c",
+    "output": "/home/yuki/Documents/Projects/fscope/build/match.o"
+  }
+]
