@@ -13,14 +13,17 @@
 #define SCORE_MATCH_CAPITAL 0.6
 #define SCORE_MATCH_DOT 0.5
 
+#define SCORING_STEP 20
+
 // ui stuff
-#define INPUT_TIMEOUT 100 // in ms
-#define PROMPT "> "
+#define INPUT_TIMEOUT 50 // in ms
 #define INTERFACE_GAP_VERTICAL 8
 #define INTERFACE_GAP_HORIZONTAL 4
+#define SCROLLOFF 10
+
+#define DEFAULT_PROMPT "> "
 #define DEFAULT_TTY "/dev/tty"
 #define FALLBACK_COMMAND "ls"
-
 #define DEFAULT_PREVIEW "cat {}"
 
 #define BORDER_TOP_LEFT     "┌"

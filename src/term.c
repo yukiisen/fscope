@@ -18,7 +18,7 @@ void term_write (Terminal *term, const char *fmt, ...) {
 	va_end(args);
 }
 
-char term_read (Terminal *term) {
+int term_read (Terminal *term) {
     char buf[1];
     read(term->input, buf, 1);
 
@@ -33,7 +33,7 @@ static inline void leave_alternate_buffer (FILE *fd) {
     fputs("\x1b[?1049l", fd);
 }
 
-Terminal * create_term() {
+Terminal *create_term() {
     Terminal * term = malloc(sizeof(Terminal));
 
     term->input = open(DEFAULT_TTY, O_RDONLY);

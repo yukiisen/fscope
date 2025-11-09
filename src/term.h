@@ -20,13 +20,29 @@ typedef struct {
 } WinSize;
 
 void term_write(Terminal *term, const char *fmt, ...);
-char term_read(Terminal *term);
+int term_read(Terminal *term);
 
 Terminal* create_term();
 void destroy_term(Terminal *term);
 
 inline void term_flush (Terminal *term) {
     fflush(term->output);
+}
+
+inline void term_clear (Terminal *term) {
+    term_write(term, "\x1b[2J");
+}
+
+inline void term_inverse (Terminal *term) {
+    term_write(term, "\x1b[7m");
+}
+
+inline void term_normal (Terminal *term) {
+    term_write(term, "\x1b[0m");
+}
+
+inline void term_put(Terminal *term, int c) {
+    fputc(c, term->output);
 }
 
 inline void term_move_cursor (Terminal *term, int x, int y) {

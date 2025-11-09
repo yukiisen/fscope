@@ -6,7 +6,7 @@
 int has_match(const char *search, const char *entry) {
     while(*search) {
         char c = *search++;
-        char options[3] = {c, tolower(c), 0};
+        char options[3] = {toupper(c), tolower(c), 0};
 
         if (!(entry = strpbrk(entry, options)))
             return 0;

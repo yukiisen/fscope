@@ -1,5 +1,5 @@
 CXX := cc
-CXXFLAGS := -O2 -Wall -Wextra -Iinclude
+CXXFLAGS := -O1 -Wall -Wextra -Iinclude
 
 SRC_DIR := src
 BUILD_DIR := build
