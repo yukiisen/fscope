@@ -60,23 +60,15 @@ int main(int argc, char **argv) {
     fds.input.events = POLLIN;
     
     int p_ret;
-    int p_timeout = -1; // non blocking poll
+    int p_timeout = -1; // blocking poll
 
     int midx = 0;
 
     nfds_t nfds = 2;
 
-    while ((p_ret = poll(&fds.term, nfds, p_timeout)) >= 0) {
+    while ((p_ret = poll((struct pollfd*)&fds, nfds, p_timeout)) >= 0) {
         if (p_ret == 0) {
             // nothing was polled, do scoring
-            // we score 10 entries before each time
-
-            if (midx == entries->length) {
-                draw(&options, term, &matches, &query);
-                p_timeout = -1;
-                continue;
-            }
-
             for (const int i = midx + SCORING_STEP; midx < i && midx < entries->length; midx++) {
                 if (has_match(query.bytes, entries->items[midx])) {
                     score_t score = score_match(query.bytes, entries->items[midx]);
@@ -88,9 +80,14 @@ int main(int argc, char **argv) {
 
             qsort(matches.pairs, matches.length, sizeof(struct pair), cmp_pairs);
 
-            p_timeout = midx == entries->length? -1 : 0; // if no more jobs do a blocking poll, otherwise disable timeout
+            if (midx == entries->length) {
+                p_timeout = -1; // if no more jobs do a blocking poll, otherwise do immediate poll
+                draw(&options, term, &matches, &query, false); // draw preview when we finish scoring
+            } else {
+                p_timeout = 0; 
+                draw(&options, term, &matches, &query, false);
+            }
 
-            draw(&options, term, &matches, &query);
 
             continue;
         }
@@ -100,12 +97,16 @@ int main(int argc, char **argv) {
             int c = term_read(term);
 
             if (IS_CHAR(c)) {
+                // TODO: fix this unsafe operation
                 query.bytes[query.length++] = c; // push character to query
                 query.bytes[query.length] = 0;
 
                 // reset entries
                 midx = 0;
                 matches.length = 0;
+
+                p_timeout = 0;
+                draw(&options, term, &matches, &query, QUERYONLY);
             }
 
             switch (c) {
@@ -116,42 +117,38 @@ int main(int argc, char **argv) {
                     // reset entries
                     midx = 0;
                     matches.length = 0;
+                    p_timeout = 0;
+                    draw(&options, term, &matches, &query, QUERYONLY);
                     break;
 
                 case CTRL_KEY('n'):
-                    selected--;
+                    selectdown();
+                    draw(&options, term, &matches, &query, PREVIEW);
                     break;
 
                 case CTRL_KEY('p'):
-                    selected++;
+                    selectup();
+                    draw(&options, term, &matches, &query, PREVIEW);
                     break;
                 case ENTER:
                     goto loop_end;
                     break;
             }
 
-            p_timeout = INPUT_TIMEOUT;
-        } else {
-            p_timeout = 0;
-        }
+        } 
 
         if ((fds.input.revents & POLLHUP) && !(fds.input.revents & POLLIN)) {
-            nfds = 1;
-            fds.input.revents = 0;
+            nfds = 1; // peer hung up and no additional data, stop polling this file
         }
 
         if (fds.input.revents & POLLIN) {
             // new line
             ssize_t n = readline(input.fd, i_buf, MAX_TEXT_LEN);
 
-            if (n == EOF) {
-                nfds = 1;
-                fds.input.revents = 0;
-            } 
-            else if (n == -2) perror("fuck something broke!");
+            if (n == -1) perror("fuck something broke!");
             else if (n > 0) list_append(entries, i_buf, n); // don't add empty strings
 
-            p_timeout = MAX(0, p_timeout);
+            p_timeout = 0;
         }
     }
 
@@ -186,11 +183,7 @@ ssize_t readline (int fd, char *buf, ssize_t maxlen) {
 
     buf[i] = '\0';
 
-    if (ret == 0)
-        return EOF;
-
-    if (ret < 0) return -2;
-
+    if (ret < 0) return -1; // return errors
     return i;
 }
 

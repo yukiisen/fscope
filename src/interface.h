@@ -9,7 +9,13 @@
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
 
-static int selected = 0;
-void draw(CliArgs *options, Terminal *term, const Scores *entries, const String *query);
+enum DrawFlags {
+    QUERYONLY = 1 << 0,
+    PREVIEW = 1 << 1
+};
+
+void draw(CliArgs *options, Terminal *term, const Scores *entries, const String *query, int flags);
+void selectup();
+void selectdown();
 
 #endif
