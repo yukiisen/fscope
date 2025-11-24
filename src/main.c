@@ -61,9 +61,7 @@ int main(int argc, char **argv) {
     
     int p_ret;
     int p_timeout = -1; // blocking poll
-
     int midx = 0;
-
     nfds_t nfds = 2;
 
     while ((p_ret = poll((struct pollfd*)&fds, nfds, p_timeout)) >= 0) {
