@@ -2,7 +2,23 @@
   {
     "arguments": [
       "/usr/bin/cc",
-      "-O2",
+      "-O1",
+      "-Wall",
+      "-Wextra",
+      "-Iinclude",
+      "-c",
+      "-o",
+      "build/interface.o",
+      "src/interface.c"
+    ],
+    "directory": "/home/yuki/Documents/Projects/kiri",
+    "file": "/home/yuki/Documents/Projects/kiri/src/interface.c",
+    "output": "/home/yuki/Documents/Projects/kiri/build/interface.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-O1",
       "-Wall",
       "-Wextra",
       "-Iinclude",
@@ -11,14 +27,14 @@
       "build/main.o",
       "src/main.c"
     ],
-    "directory": "/home/yuki/Documents/Projects/fscope",
-    "file": "/home/yuki/Documents/Projects/fscope/src/main.c",
-    "output": "/home/yuki/Documents/Projects/fscope/build/main.o"
+    "directory": "/home/yuki/Documents/Projects/kiri",
+    "file": "/home/yuki/Documents/Projects/kiri/src/main.c",
+    "output": "/home/yuki/Documents/Projects/kiri/build/main.o"
   },
   {
     "arguments": [
       "/usr/bin/cc",
-      "-O2",
+      "-O1",
       "-Wall",
       "-Wextra",
       "-Iinclude",
@@ -27,8 +43,40 @@
       "build/match.o",
       "src/match.c"
     ],
-    "directory": "/home/yuki/Documents/Projects/fscope",
-    "file": "/home/yuki/Documents/Projects/fscope/src/match.c",
-    "output": "/home/yuki/Documents/Projects/fscope/build/match.o"
+    "directory": "/home/yuki/Documents/Projects/kiri",
+    "file": "/home/yuki/Documents/Projects/kiri/src/match.c",
+    "output": "/home/yuki/Documents/Projects/kiri/build/match.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-O1",
+      "-Wall",
+      "-Wextra",
+      "-Iinclude",
+      "-c",
+      "-o",
+      "build/options.o",
+      "src/options.c"
+    ],
+    "directory": "/home/yuki/Documents/Projects/kiri",
+    "file": "/home/yuki/Documents/Projects/kiri/src/options.c",
+    "output": "/home/yuki/Documents/Projects/kiri/build/options.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-O1",
+      "-Wall",
+      "-Wextra",
+      "-Iinclude",
+      "-c",
+      "-o",
+      "build/term.o",
+      "src/term.c"
+    ],
+    "directory": "/home/yuki/Documents/Projects/kiri",
+    "file": "/home/yuki/Documents/Projects/kiri/src/term.c",
+    "output": "/home/yuki/Documents/Projects/kiri/build/term.o"
   }
 ]

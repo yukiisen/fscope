@@ -3,7 +3,7 @@ CXXFLAGS := -O1 -Wall -Wextra -Iinclude
 
 SRC_DIR := src
 BUILD_DIR := build
-BIN := $(BUILD_DIR)/fscope
+BIN := $(BUILD_DIR)/kiri
 
 SOURCES := $(wildcard $(SRC_DIR)/*.c)
 OBJECTS := $(patsubst $(SRC_DIR)/%, $(BUILD_DIR)/%, $(SOURCES:.c=.o))
