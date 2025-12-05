@@ -1,7 +1,10 @@
+#include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/poll.h>
 #include <sys/wait.h>
@@ -18,11 +21,6 @@
 #define LIST_IMPL
 #include "types.h"
 
-#define CTRL_KEY(key) (key - 'a' + 1)
-#define IS_CHAR(c) (c < 127 && c > 31)
-#define BACKSPACE 127
-#define ENTER 13
-
 typedef struct {
     int fd;
     int pid;
@@ -33,6 +31,9 @@ static String query = {0};
 static CliArgs options = {0};
 static Scores matches = {0};
 static Proc input = {0};
+static Terminal *term = NULL;
+static Entries *entries = NULL;
+
 
 // input buffer
 static char i_buf[MAX_TEXT_LEN];
@@ -41,12 +42,137 @@ ssize_t readline (int fd, char *buf, ssize_t maxlen);
 int open_input_stream(Proc *p);
 void close_input_stream (Proc *p);
 
+static inline void cleanup () {
+    list_free(entries);
+    if (term != NULL) destroy_term(term);
+    close_input_stream(&input);
+}
+
+void handle_sig () {
+    draw_outline(&options, term);
+    draw_query(&options, term, &query);
+    draw_entries(term, &matches);
+    draw_preview(&options, term, &matches);
+    term_flush(term);
+}
+
+// KEybindings
+static void action_up () {
+    select_ent(selected == matches.length - 1? 0 : selected + 1);
+    draw_entries(term, &matches);
+    draw_preview(&options, term, &matches);
+    term_flush(term);
+}
+
+static void action_down () {
+    select_ent(selected == 0? matches.length - 1 : selected - 1);
+    draw_entries(term, &matches);
+    draw_preview(&options, term, &matches);
+    term_flush(term);
+}
+
+static void action_enter () {
+    char *output = query.bytes;
+    if (selected < matches.length) output = matches.pairs[selected].entry;
+    destroy_term(term); // we need to close output streams to write
+    term = NULL;
+    printf("%s\n", output);
+    cleanup(); 
+    exit(0);
+}
+
+static void action_left () {
+    query.cursor_pos = MAX(0, query.cursor_pos - 1);
+    draw_query(&options, term, &query);
+    term_flush(term);
+}
+
+static void action_right () {
+    query.cursor_pos = MIN(query.length, query.cursor_pos + 1);
+    draw_query(&options, term, &query);
+    term_flush(term);
+}
+
+static void action_del_wrd (int *p_timeout, int *midx) {
+    for (int i = query.cursor_pos; i >= 0; i--) {
+        if (query.bytes[i] == ' ' || i == 0) {
+            shift_string(&query, i - query.cursor_pos);
+            query.cursor_pos = i;
+            break;
+        }
+    }
+
+    // reset entries
+    *midx = 0;
+    matches.length = 0;
+    *p_timeout = 0;
+
+    draw_query(&options, term, &query);
+    term_flush(term);
+}
+
+static void action_del_all (int *p_timeout, int *midx) {
+    query.length = 0;
+    query.bytes[0] = 0;
+    query.cursor_pos = 0;
+
+    // reset entries
+    *midx = 0;
+    matches.length = 0;
+    *p_timeout = 0;
+
+    draw_query(&options, term, &query);
+    term_flush(term);
+}
+
+static void action_del (int *p_timeout, int *midx) {
+    if (query.cursor_pos == 0) return;
+
+    shift_string(&query, -1);
+    query.cursor_pos -= 1;
+    
+    // reset entries
+    *midx = 0;
+    matches.length = 0;
+    *p_timeout = 0;
+
+    draw_query(&options, term, &query);
+    term_flush(term);
+}
+
+struct keybinding { const char *key; void (*handler)(int*, int*); };
+
+#define CTRL_KEY(key) (const char[]){key - 'a' + 1 , '\0'}
+#define IS_CHAR(c) (c < 127 && c > 31)
+#define BACKSPACE (const char[]){ 127 , '\0' }
+
+static const struct keybinding keybindings[] = {
+    {CTRL_KEY('m'), 	action_enter},
+    {CTRL_KEY('n'), 	action_down},
+    {CTRL_KEY('j'), 	action_down},
+    {CTRL_KEY('p'), 	action_up},
+    {CTRL_KEY('k'), 	action_up},
+    {CTRL_KEY('w'), 	action_del_wrd},
+    {CTRL_KEY('u'), 	action_del_all},
+    {BACKSPACE,     	action_del},
+    {"\x1b[D",      	action_left},
+    {"\x1bOD",      	action_left},
+    {"\x1bOC",      	action_right},
+    {"\x1b[C",      	action_right},
+    {"\x1b[A",      	action_up},
+    {"\x1bOA",      	action_up},
+    {"\x1b[B",      	action_down},
+    {"\x1bOB",      	action_down},
+};
+
 int main(int argc, char **argv) {
     get_options(&options, argv, argc);
     open_input_stream(&input);
 
-    Terminal *term = create_term();
-    Entries *entries = list_create(10);
+    signal(SIGWINCH, handle_sig);
+
+    term = create_term();
+    entries = list_create(10);
 
     struct {
         struct pollfd term;
@@ -63,8 +189,13 @@ int main(int argc, char **argv) {
     int p_timeout = -1; // blocking poll
     int midx = 0;
     nfds_t nfds = 2;
+    
+    draw_outline(&options, term);
+    draw_query(&options, term, &query);
+    term_flush(term);
 
-    while ((p_ret = poll((struct pollfd*)&fds, nfds, p_timeout)) >= 0) {
+    while ((p_ret = poll((struct pollfd*)&fds, nfds, p_timeout)) >= 0 || errno == EINTR) {
+        if (p_ret == -1) continue; // the syscall was blocked by a signal, run it again
         if (p_ret == 0) {
             // nothing was polled, do scoring
             for (const int i = midx + SCORING_STEP; midx < i && midx < entries->length; midx++) {
@@ -76,63 +207,55 @@ int main(int argc, char **argv) {
                 }
             }
 
-            qsort(matches.pairs, matches.length, sizeof(struct pair), cmp_pairs);
+            qsort(matches.pairs, matches.length, sizeof(struct pair_t), cmp_pairs);
 
             if (midx == entries->length) {
                 p_timeout = -1; // if no more jobs do a blocking poll, otherwise do immediate poll
-                draw(&options, term, &matches, &query, false); // draw preview when we finish scoring
             } else {
                 p_timeout = 0; 
-                draw(&options, term, &matches, &query, false);
             }
 
+            draw_entries(term, &matches);
+            draw_preview(&options, term, &matches);
+            term_flush(term);
 
             continue;
         }
 
         if (fds.term.revents & POLLIN) {
             // key press
-            int c = term_read(term);
+            char key_buf[4] = {0};
+            key_buf[0] = term_read(term);
 
-            if (IS_CHAR(c)) {
-                // TODO: fix this unsafe operation
-                query.bytes[query.length++] = c; // push character to query
-                query.bytes[query.length] = 0;
+            // check if we have an escape sequence and ready bytes.
+            if (key_buf[0] == '\x1b') {
+                int ret = poll(&fds.term, 1, INPUT_TIMEOUT);
 
-                // reset entries
-                midx = 0;
-                matches.length = 0;
-
-                p_timeout = 0;
-                draw(&options, term, &matches, &query, QUERYONLY);
+                if (ret < 0) break; // fuck off on errors
+                if (ret == 1) term_read_buf(term, key_buf + 1, 2);
             }
 
-            switch (c) {
-                case BACKSPACE:
-                    query.length = MAX(query.length - 1, 0);
-                    query.bytes[query.length] = 0; // remove last character from query
-                    
+
+            if (strcmp(key_buf, "\x1b") == 0) goto loop_end;
+            else if (IS_CHAR(key_buf[0])) {
+                if (shift_string(&query, 1) == true) {
+                    query.bytes[query.cursor_pos++] = key_buf[0];
+
                     // reset entries
                     midx = 0;
                     matches.length = 0;
                     p_timeout = 0;
-                    draw(&options, term, &matches, &query, QUERYONLY);
-                    break;
-
-                case CTRL_KEY('n'):
-                    selectdown();
-                    draw(&options, term, &matches, &query, PREVIEW);
-                    break;
-
-                case CTRL_KEY('p'):
-                    selectup();
-                    draw(&options, term, &matches, &query, PREVIEW);
-                    break;
-                case ENTER:
-                    goto loop_end;
-                    break;
+                    
+                    draw_query(&options, term, &query);
+                    term_flush(term);
+                }
+            } else {
+                static const int n = sizeof(keybindings) / sizeof(struct keybinding);
+                for (uint i = 0; i < n; i++) {
+                    // a state struct should probably be used but meh
+                    if (strcmp(key_buf, keybindings[i].key) == 0) keybindings[i].handler(&p_timeout, &midx); 
+                }
             }
-
         } 
 
         if ((fds.input.revents & POLLHUP) && !(fds.input.revents & POLLIN)) {
@@ -156,9 +279,7 @@ loop_end:
         perror("Poll");
     }
 
-    list_free(entries);
-    destroy_term(term);
-    close_input_stream(&input);
+    cleanup();
 
     return 0;
 }

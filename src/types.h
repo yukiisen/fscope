@@ -20,18 +20,19 @@ typedef struct {
     int capacity;
 } Entries;
 
-struct pair {
+struct pair_t {
     score_t score;
-    char *entry;
+    char *entry; // pointer from Entries
 };
 
 typedef struct {
-    struct pair pairs[MAX_MATCHES];
+    struct pair_t pairs[MAX_MATCHES];
     int length;
 } Scores;
 
 typedef struct {
     int length;
+    int cursor_pos;
     char bytes[MAX_TEXT_LEN];
 } String;
 
@@ -41,14 +42,31 @@ void list_free (Entries *list);
 
 int cmp_pairs (const void *p1, const void *p2);
 
+// Shifts bytes starting from `cursor_pos` by `amount`.
+inline int shift_string (String *str, ssize_t amount) {
+    // return false if the operation overflows buffer
+    if (str->length + amount > MAX_TEXT_LEN) return false; 
+    if (str->length + amount < 0) return false;
+
+    if (amount == 0) return true;
+    else if (amount > 0) 
+        for (int i = str->length; i >= str->cursor_pos; i--) str->bytes[i + amount] = str->bytes[i]; // shift forward
+    else 
+        for (int i = str->cursor_pos; i < str->length + 1; i++) if (i + amount >= 0) str->bytes[i + amount] = str->bytes[i]; // shift backward
+
+    str->length += amount;
+
+    return true;
+}
+
 #endif
 
 #ifdef LIST_IMPL
 int cmp_pairs (const void *p1, const void *p2) {
-    struct pair left = *(const struct pair *)p1;
-    struct pair right = *(const struct pair *)p2;
+    struct pair_t left = *(const struct pair_t *)p1;
+    struct pair_t right = *(const struct pair_t *)p2;
 
-    return (left.score > right.score) - (left.score < right.score);
+    return (left.score < right.score) - (left.score > right.score);
 }
 
 Entries *list_create (size_t capacity) {

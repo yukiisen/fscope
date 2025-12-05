@@ -1,5 +1,6 @@
+VERSION := $(shell cat VERSION)
 CXX := cc
-CXXFLAGS := -O1 -Wall -Wextra -Iinclude
+CXXFLAGS := -DVERSION=\"${VERSION}\" -O3 -Wall -Wextra -Iinclude
 
 SRC_DIR := src
 BUILD_DIR := build

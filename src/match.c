@@ -6,7 +6,7 @@
 int has_match(const char *search, const char *entry) {
     while(*search) {
         char c = *search++;
-        char options[3] = {toupper(c), tolower(c), 0};
+        char options[3] = {toupper(c), c, 0};
 
         if (!(entry = strpbrk(entry, options)))
             return 0;
@@ -63,7 +63,7 @@ score_t score_match(const char *search, const char *entry) {
                score += SCORE_MATCH_CONSECUTIVE + (j - last_j) * SCORE_GAP_INNER + match.bonus[j];
             }
     
-            last_j = j;
+            last_j = j + 1;
             i++;
         }
 

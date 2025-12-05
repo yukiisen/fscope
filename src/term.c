@@ -1,6 +1,7 @@
 #include <asm-generic/ioctls.h>
 #include <fcntl.h>
 #include <stdarg.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
@@ -18,11 +19,19 @@ void term_write (Terminal *term, const char *fmt, ...) {
 	va_end(args);
 }
 
-int term_read (Terminal *term) {
-    char buf[1];
-    read(term->input, buf, 1);
+void term_write_buf (Terminal *term, const char *buf, size_t len) {
+    fwrite(buf, 1, len, term->output); 
+}
 
-    return buf[0];
+int term_read (Terminal *term) {
+    int buf;
+    read(term->input, &buf, 1);
+
+    return buf;
+}
+
+int term_read_buf (Terminal *term, void *buf, size_t len) {
+    return read(term->input, buf, len);
 }
 
 static inline void enter_alternate_buffer (FILE *fd) {

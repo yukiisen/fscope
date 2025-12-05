@@ -35,7 +35,7 @@ void get_options (CliArgs *options, char *const *argv, int argc) {
                 options->tty = argv[++i];
             else goto usage;
         } else if (strcmp("--version", arg) == 0) {
-            printf("fscope-" VERSION "\n");
+            printf("%s-" VERSION "\n", argv[0]);
             exit(0);
         } else {
             goto usage;
