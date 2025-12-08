@@ -12,6 +12,8 @@ It uses the same algorithm as fzy.
 # Installation:
 From source:
 ```
+git clone https://github.com/yukiisen/kiri.git
+cd kiri
 make
 cp ./build/kiri ~/.local/bin/kiri // or somewhere else
 ```
